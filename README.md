@@ -37,11 +37,11 @@ optional arguments:
   --list-devices       List all known devices
   --list-profiles      List all available profiles
   --tickets            Print internet tickets
-  --extend EXTEND      extend internet for device by redeeming an internet
+  --extend EXTEND      extend internet for device EXTEND by redeeming an internet
                        ticket
 ```
 
-1. Determine the ID of the device, whose profile you want to change
+#### 1. Determine the ID of the device, whose profile you want to change
 
 ```
 ./fritz-switch-profiles.py --password YOURPASSWORD --list-devices
@@ -60,7 +60,7 @@ landevice5006    filtprof2        Chromecast
 ...
 ```
 
-2. Determine the available profiles
+#### 2. Determine the available profiles
 ```
 ./fritz-switch-profiles.py --password YOURPASSWORD --list-profiles
 ```
@@ -78,7 +78,7 @@ filtprof3        Unbeschränkt
 filtprof4        Gesperrt
 ```
 
-3. Actually change the profiles
+#### 3. Actually change the profiles
 ```
 ./fritz-switch-profiles.py --password YOURPASSWORD landevice6494=filtprof4
 ```
@@ -94,6 +94,27 @@ UPDATING DEVICE PROFILES...
 ```
 
 Note that you may change the profiles of multiple devices at once by supplying multiple `DEVICE=PROFILE` pairs on the command line.
+
+#### Get list of internet tickets
+```
+ ./fritz_switch_profiles.py --tickets
+ 421542
+ 857399
+ 368755
+ 523148
+ 235048
+ 500066
+ 765012
+ 424201
+ 032458
+ 551318
+ 
+```
+
+#### Extend internet time by 45min for a device
+```
+./fritz_switch_profiles.py --extend landevice4711
+```
 
 ## Usage as a library
 
