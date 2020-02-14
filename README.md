@@ -1,8 +1,10 @@
-[![Build Status](https://travis-ci.org/flopp/fritz-switch-profiles.svg?branch=master)](https://travis-ci.org/flopp/fritz-switch-profiles)
-![License MIT](https://img.shields.io/badge/license-MIT-lightgrey.svg?style=flat)
+![License MIT](https://img.shields.io/badge/license-MIT-green.svg?style=flat)
 
 # fritz-switch-profiles
-A (Python) script to remotely set device profiles of an AVM Fritz!Box
+A (Python) script to remotely 
+ * set device profiles of an AVM Fritz!Box
+ * print list of internet tickets
+ * extend internet time for a device by redeeming an internet ticket
 
 ## Installation
 
@@ -17,8 +19,10 @@ pip install -r requirements.txt
 ## Usage
 
 ```
-usage: fritz-switch-profiles.py [-h] [--url URL] [--user USER] --password
-                                PASSWORD [--list-devices] [--list-profiles]
+usage: fritz_switch_profiles.py [-h] [--url URL] [--user USER]
+                                [--password PASSWORD] [--inifile INIFILE]
+                                [--list-devices] [--list-profiles] [--tickets]
+                                [--extend EXTEND]
                                 [DEVICE=PROFILE [DEVICE=PROFILE ...]]
 
 positional arguments:
@@ -29,8 +33,12 @@ optional arguments:
   --url URL            The URL of your Fritz!Box; default: http://fritz.box
   --user USER          Login username; default: empty
   --password PASSWORD  Login password
+  --inifile INIFILE    .ini config file holding username/password
   --list-devices       List all known devices
   --list-profiles      List all available profiles
+  --tickets            Print internet tickets
+  --extend EXTEND      extend internet for device by redeeming an internet
+                       ticket
 ```
 
 1. Determine the ID of the device, whose profile you want to change
@@ -108,6 +116,15 @@ fps.print_profiles()
 profile_for_device = [devices[0]['id1'], profiles[2]['id']]
 
 fps.set_profiles(profile_for_device)
+```
+
+## ini Config File
+You can store your credentials in an .ini config file if it follows the following format:
+```
+[fritz.box]
+host = http://fritz.box
+username = MY_USERNAME
+password = MY_PASSWORD
 ```
 
 ## Known Issues
