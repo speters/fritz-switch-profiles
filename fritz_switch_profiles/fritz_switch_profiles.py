@@ -13,6 +13,8 @@ import re
 import requests
 import sys
 import logging
+import configparser
+from os import path
 
 
 class FritzProfileSwitch:
@@ -21,9 +23,10 @@ class FritzProfileSwitch:
         self.sid = self.login(user, password)
         self.profiles = []
         self.devices = []
-        self.fetch_profiles()
-        self.fetch_devices()
-        self.fetch_device_profiles()
+        self.tickets = []
+        #self.fetch_profiles()
+        #self.fetch_devices()
+        #self.fetch_device_profiles()
 
     def get_sid_challenge(self, url):
         r = requests.get(url, allow_redirects=True)
@@ -137,6 +140,28 @@ class FritzProfileSwitch:
             profile_id = row.xpath('td[@class="btncolumn"]/button[@name="edit"]/@value')[0]
             self.profiles.append({'name': profile_name, 'id': profile_id})
 
+    def fetch_internet_tickets(self):
+        response = requests.get(self.url + "/internet/pp_ticket.lua?sid=%s" % self.sid)
+        logging.debug(response.text)
+        self.tickets = re.findall(r'\["id"\] = "(\d+)"', response.text)
+
+    def get_internet_ticket(self):
+        if not self.tickets:
+            self.fetch_internet_tickets()
+        return self.tickets.pop(0)
+
+    def print_internet_tickets(self):
+        if not self.tickets:
+            self.fetch_internet_tickets()
+        print("\n".join(self.tickets))
+
+    def redeem_ticket(self, device):
+        ticket = self.get_internet_ticket()
+        logging.info('EXTENDING INTERNET ACCESS FOR {} WITH TICKET {}'.format(device, ticket))
+        data = {'account': device.replace('landevice', 'landeviceUID-'), 'edit': '', 'ticket': ticket}
+        url = self.url + '/tools/kids_not_allowed.lua'
+        r = requests.post(url, data=data, allow_redirects=True)
+
     def get_devices(self):
         return sorted(self.devices, key=lambda x: x['name'].lower())
 
@@ -193,24 +218,66 @@ def main():
                         help='The URL of your Fritz!Box; default: http://fritz.box')
     parser.add_argument('--user', metavar='USER', type=str, default='',
                         help='Login username; default: empty')
-    parser.add_argument('--password', metavar='PASSWORD', type=str, required=True,
+    parser.add_argument('--password', metavar='PASSWORD', type=str, default='',
                         help='Login password')
+    parser.add_argument('--inifile', metavar='INIFILE', type=str, default='~/.smtpclient.ini',
+                        help='.ini config file holding username/password')
     parser.add_argument('--list-devices', dest='listdevices', action='store_true',
                         help='List all known devices')
     parser.add_argument('--list-profiles', dest='listprofiles', action='store_true',
                         help='List all available profiles')
+    parser.add_argument('--tickets', dest='tickets', action='store_true',
+                        help='Print internet tickets')
+    parser.add_argument('--extend', metavar='EXTEND', type=str, default='',
+                        help='extend internet for device by redeeming an internet ticket')
     parser.add_argument('deviceProfiles', nargs='*', metavar='DEVICE=PROFILE',
                         type=parse_kv,
                         help='Desired device to profile mapping')
     args = parser.parse_args()
 
-    fps = FritzProfileSwitch(args.url, args.user, args.password)
-    if args.listdevices:
-        fps.print_devices()
-    if args.listprofiles:
-        fps.print_profiles()
-    if args.deviceProfiles:
-        fps.set_profiles(args.deviceProfiles)
+    config = configparser.ConfigParser({'host': 'fritz.box', 'username':'', 'password':''})
+    config.read(['/etc/smtpclient.ini',path.expanduser(args.inifile)])
+
+    if config.has_section('fritz.box'):
+        section = 'fritz.box'
+    else:
+        try:
+            section=config.sections()[0]
+        except IndexError:
+            section = 'DEFAULT'
+
+    host = config.get(section, 'host')
+    if host != '':
+        if host[0:7] == 'http://' or  host[0:8] == 'https://':
+            args.url = host
+        else:
+            args.url = 'http://' + host
+
+    if args.user == '':
+        args.user = config.get(section, 'username')
+    if args.password == '':
+        args.password = config.get(section, 'password')
+    if args.password == '':
+        raise argparse.ValueError("password is required")
+
+    if args.listdevices or args.listprofiles or args.deviceProfiles or args.tickets or args.extend:
+        fps = FritzProfileSwitch(args.url, args.user, args.password)
+        if args.listdevices or args.listprofiles or args.deviceProfiles:
+            fps.fetch_profiles()
+            fps.fetch_devices()
+            fps.fetch_device_profiles()
+            if args.listdevices:
+                fps.print_devices()
+            if args.listprofiles:
+                fps.print_profiles()
+            if args.deviceProfiles:
+                fps.set_profiles(args.deviceProfiles)
+        if args.tickets:
+            fps.print_internet_tickets()
+        if args.extend:
+            fps.redeem_ticket(args.extend)
+    else:
+        parser.print_help()
 
 
 if __name__ == '__main__':
